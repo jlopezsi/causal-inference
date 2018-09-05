@@ -1,0 +1,96 @@
+---
+title: "Causal graph"
+author: "Iyar Lin"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  github_document:
+    toc: true
+    toc_depth: 2
+    pandoc_args: --webtex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
+set.seed(1)
+options(scipen = 999)
+
+packages <- c(
+  "devtools", # install_github
+  "tidyverse" # best thing that happend to me
+)
+
+sapply(
+  packages,
+  function(x) if (!require(x, character.only = TRUE, quietly = T)) {
+      install.packages(x, quiet = T, verbose = F)
+      library(x, character.only = T, quietly = T, verbose = F)
+    }
+)
+
+if(! require(dagitty)){
+  install_github("jtextor/dagitty/r") # Analysis of structural causal models
+  library(dagitty, quietly = T)
+}
+
+```
+
+# Causal graph
+
+## Variables
+
+d_t $\in \{0,1\}$ - Subscriber disconnected at tenure $t$  
+T $\in [0,\infty)$ - Subscriber life time  
+comp - Competition measurements  
+cong - Network congestion measurements  
+dem - Demographics (credit score, population density, age)  
+pop - Population count in beam  
+pool - Perspective customers pool (count)  
+plan - Plan set offered  
+subs - Number of subscribers on the network (that share bandwidth)  
+t_s - Time since satellite lunched  
+cap - Maximum capacity  
+
+
+```{r plot causal graph}
+g <- dagitty( "dag {
+d_t -> T
+dem -> pool
+dem -> comp
+pop -> pool
+comp -> pool
+comp -> plan
+comp -> d_t
+pool -> subs
+plan -> d_t
+plan -> subs
+plan -> cong
+t_s -> subs
+subs -> cong
+cap -> cong
+cong -> d_t
+}" )
+
+set.seed(1)
+plot(graphLayout(g))
+```
+
+A simpler model might be:
+
+```{r plot simpler causal graph}
+g <- dagitty( "dag {
+d_t -> T
+con -> d_t
+comp -> con
+comp -> d_t
+dem -> comp
+dem -> d_t
+}" )
+
+set.seed(1)
+plot(graphLayout(g))
+```
+
+
+## Outages
+
+It's possible that more than congenstion outages causes disconnects. 

@@ -1,0 +1,103 @@
+---
+title: "Graphical models simulation exploration"
+author: "Iyar Lin"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  github_document:
+    toc: true
+    toc_depth: 2
+    pandoc_args: --webtex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = T)
+set.seed(1)
+options(scipen = 999)
+
+packages <- c(
+  "devtools", # install_github
+  "tidyverse", # best thing that happend to me
+  "mgm"
+)
+
+sapply(
+  packages,
+  function(x) if (!require(x, character.only = TRUE, quietly = T)) {
+      install.packages(x, quiet = T, verbose = F)
+      library(x, character.only = T, quietly = T, verbose = F)
+    }
+)
+
+if(! require(dagitty)){
+  install_github("jtextor/dagitty/r") # Analysis of structural causal models
+  library(dagitty, quietly = T)
+}
+
+```
+
+# Generate simulated dataset
+
+## Define model
+
+```{r define model and plot}
+g <- dagitty( "dag {
+Z -> W [beta = -0.4]
+W -> U [beta = 0.2]
+X -> W [beta = 0.35]
+X -> Y [beta = -0.9]
+}" )
+
+set.seed(1)
+plot(graphLayout(g))
+```
+
+```{r list conditional independnecies}
+print(impliedConditionalIndependencies(g))
+```
+
+## Generate new observations
+
+```{r simulate dataset}
+sim_data <- simulateSEM(g, N = 100000)
+```
+
+# Estimate model
+
+## Estimate model structure
+
+```{r find graph}
+mfit <- mgm(sim_data, type = rep("g", ncol(sim_data)), level = rep(1, ncol(sim_data)), k = 3, verbatim = T)
+FactorGraph(mfit, labels = names(sim_data))
+```
+
+Looks like the nodewise regression model was able to reconstruct correctly the model structure. Now it's up to the data scientist to determine the diretions of the arrows based on domain knowledge. 
+
+## Find coeffcients
+
+Assuming one was able to correctly identify the arrow directions I'll now compare the estimated overall effect of X on U running a regular regression, and when adjusting correctly. We know that the true overall effect is:
+
+```{r true effects table, results = "asis"}
+pander::pandoc.table(data.frame(variable = c("Z", "W", "X", "Y"), overall_effect = c(-0.08, 0.2, 0.07, 0)))
+```
+
+### Naive model
+
+```{r, results = "asis"}
+naive_model <- lm(U ~ ., data = sim_data)
+pander::pandoc.table(coefficients(naive_model))
+```
+
+The naive model only gets $\beta_W$ right, missing on the others
+
+### Causal inference
+
+To get X we need to condition on Z only:
+
+```{r, results = "asis"}
+x_model <- lm(U ~ X + Z, data = sim_data)
+pander::pandoc.table(coefficients(x_model))
+```
+
+To get Z it's the same and we can see it above. 
+
+We can also see Y can't affect U.

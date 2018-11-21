@@ -1,0 +1,7 @@
+*.csv
+*.RData
+*.rdb
+*.rdx
+*.rds
+*__packages
+*.Rhistory

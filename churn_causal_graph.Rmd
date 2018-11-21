@@ -38,8 +38,8 @@ if(! require(dagitty)){
 
 ## Variables
 
-d_t $\in \{0,1\}$ - Subscriber disconnected at tenure $t$  
-T $\in [0,\infty)$ - Subscriber life time  
+$d_t\in \{0,1\}$ - Subscriber disconnected at tenure $t$  
+$T \in [0,\infty)$ - Subscriber life time  
 comp - Competition measurements  
 cong - Network congestion measurements  
 dem - Demographics (credit score, population density, age)  

@@ -1,7 +1,7 @@
 Causal graph
 ================
 Iyar Lin
-05 September, 2018
+21 November, 2018
 
 -   [Causal graph](#causal-graph)
     -   [Variables](#variables)
@@ -13,8 +13,8 @@ Causal graph
 Variables
 ---------
 
-d\_t ![\\in \\{0,1\\}](https://latex.codecogs.com/png.latex?%5Cin%20%5C%7B0%2C1%5C%7D "\in \{0,1\}") - Subscriber disconnected at tenure ![t](https://latex.codecogs.com/png.latex?t "t")
-T ![\\in \[0,\\infty)](https://latex.codecogs.com/png.latex?%5Cin%20%5B0%2C%5Cinfty%29 "\in [0,\infty)") - Subscriber life time
+![d\_t\\in \\{0,1\\}](https://latex.codecogs.com/png.latex?d_t%5Cin%20%5C%7B0%2C1%5C%7D "d_t\in \{0,1\}") - Subscriber disconnected at tenure ![t](https://latex.codecogs.com/png.latex?t "t")
+![T \\in \[0,\\infty)](https://latex.codecogs.com/png.latex?T%20%5Cin%20%5B0%2C%5Cinfty%29 "T \in [0,\infty)") - Subscriber life time
 comp - Competition measurements
 cong - Network congestion measurements
 dem - Demographics (credit score, population density, age)
@@ -25,11 +25,11 @@ subs - Number of subscribers on the network (that share bandwidth)
 t\_s - Time since satellite lunched
 cap - Maximum capacity
 
-![](causal_graph_files/figure-markdown_github/plot%20causal%20graph-1.png)
+![](churn_causal_graph_files/figure-markdown_github/plot%20causal%20graph-1.png)
 
 A simpler model might be:
 
-![](causal_graph_files/figure-markdown_github/plot%20simpler%20causal%20graph-1.png)
+![](churn_causal_graph_files/figure-markdown_github/plot%20simpler%20causal%20graph-1.png)
 
 Outages
 -------

@@ -180,7 +180,7 @@ Obtaining the true congestion effect.
 
 Next let's assume we also measure:  
 
-* brand: Our company's brand (e.g. we suck, we're the best in the market)  
+* population: How many potential subscribers in beam footprint 
 * demo: Demographics (rich population, dense population etc)  
 
 We'll assume the graph below depicts the causal relatioships between the all measured variables:
@@ -193,16 +193,21 @@ cong -> CX [beta = -0.3]
 CX -> churn [beta = -0.5]
 comp -> cong [beta = -0.4]
 comp -> churn [beta = 0.9]
-cong -> brand [beta = -0.8]
-brand -> comp [beta = 0.7]
-demo -> comp [beta = 0.4]
-demo -> churn [beta = -0.7]
+population -> comp [beta = 0.2]
+population -> cong [beta = 0.3]
+demo -> comp [beta = 0.3]
+demo -> churn [beta = -0.1]
 }")
 
 plot(graphLayout(g))
 ```
 
-This time around neither conditioning on comp neither using all variables will help us. We'll have to use grpahical model math to discover that we need to condition on: $\{comp, demo\}$.
+This time around neither conditioning on comp neither using all variables will help us. We'll have to use grpahical model math to discover that we need to condition on: 
+
+```{r}
+print(adjustmentSets(g))
+```
+
 
 So running the model:
 

@@ -250,7 +250,7 @@ Collider nodes (advanced)
 
 Next let's assume we also measure:
 
--   brand: Our company's brand (e.g. we suck, we're the best in the market)
+-   population: How many potential subscribers in beam footprint
 -   demo: Demographics (rich population, dense population etc)
 
 We'll assume the graph below depicts the causal relatioships between the all measured variables:
@@ -263,10 +263,10 @@ cong -> CX [beta = -0.3]
 CX -> churn [beta = -0.5]
 comp -> cong [beta = -0.4]
 comp -> churn [beta = 0.9]
-cong -> brand [beta = -0.8]
-brand -> comp [beta = 0.7]
-demo -> comp [beta = 0.4]
-demo -> churn [beta = -0.7]
+population -> comp [beta = 0.2]
+population -> cong [beta = 0.3]
+demo -> comp [beta = 0.3]
+demo -> churn [beta = -0.1]
 }")
 
 plot(graphLayout(g))
@@ -274,7 +274,14 @@ plot(graphLayout(g))
 
 ![](graphical_models_simulation_exploration_files/figure-markdown_github/define%20model%203-1.png)
 
-This time around neither conditioning on comp neither using all variables will help us. We'll have to use grpahical model math to discover that we need to condition on: ![\\{comp, demo\\}](https://latex.codecogs.com/png.latex?%5C%7Bcomp%2C%20demo%5C%7D "\{comp, demo\}").
+This time around neither conditioning on comp neither using all variables will help us. We'll have to use grpahical model math to discover that we need to condition on:
+
+``` r
+print(adjustmentSets(g))
+```
+
+    ## { comp, demo }
+    ## { comp, population }
 
 So running the model:
 
@@ -291,12 +298,12 @@ We get the following coefficients:
 pandoc.table(coefficients(model))
 ```
 
-<table style="width:56%;">
+<table style="width:57%;">
 <colgroup>
 <col width="19%" />
 <col width="11%" />
 <col width="12%" />
-<col width="12%" />
+<col width="13%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -308,10 +315,10 @@ pandoc.table(coefficients(model))
 </thead>
 <tbody>
 <tr class="odd">
-<td align="center">-0.001824</td>
-<td align="center">0.154</td>
-<td align="center">0.9033</td>
-<td align="center">-0.6996</td>
+<td align="center">-0.001032</td>
+<td align="center">0.148</td>
+<td align="center">0.8984</td>
+<td align="center">-0.09993</td>
 </tr>
 </tbody>
 </table>

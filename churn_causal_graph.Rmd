@@ -10,7 +10,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = T)
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
 set.seed(1)
 options(scipen = 999)
 
@@ -39,15 +39,25 @@ if(! require(dagitty)){
 ## Variables
 
 $d_t\in \{0,1\}$ - Subscriber disconnected at tenure $t$  
+
 $T \in [0,\infty)$ - Subscriber life time  
+
 comp - Competition measurements  
+
 cong - Network congestion measurements  
+
 dem - Demographics (credit score, population density, age)  
+
 pop - Population count in beam  
+
 pool - Perspective customers pool (count)  
+
 plan - Plan set offered  
+
 subs - Number of subscribers on the network (that share bandwidth)  
+
 t_s - Time since satellite lunched  
+
 cap - Maximum capacity  
 
 

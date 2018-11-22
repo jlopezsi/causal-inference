@@ -10,14 +10,16 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = T)
+knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
 set.seed(1)
 options(scipen = 999)
 
 packages <- c(
   "devtools", # install_github
   "tidyverse", # best thing that happend to me
-  "mgm"
+  "mgm",
+  "pander", # table rendering
+  "rpart"
 )
 
 sapply(
@@ -28,76 +30,205 @@ sapply(
     }
 )
 
-if(! require(dagitty)){
+if (!require(dagitty)) {
   install_github("jtextor/dagitty/r") # Analysis of structural causal models
   library(dagitty, quietly = T)
 }
-
 ```
 
-# Generate simulated dataset
+# Examples where having the model graph is crucial  
+## Confounding variable example
 
-## Define model
+Let's assume we measure the following variables:
 
-```{r define model and plot}
-g <- dagitty( "dag {
-Z -> W [beta = -0.4]
-W -> U [beta = 0.2]
-X -> W [beta = 0.35]
-X -> Y [beta = -0.9]
-}" )
+* churn: Did a subscriber churn in the first 6 months? (Constructing it as a continuous variable for demonstration purposes)  
+* cong: Network congestion (e.g. fill rate)  
+* comp: Competition levels (e.g. distance to fiber)  
 
-set.seed(1)
+Let's also assume that the graph below depicts the causal relatioships between the above variables:
+
+```{r define model1 and plot}
+g <- dagitty("dag {
+churn [outcome]
+cong [exposure]
+cong -> churn [beta = 0.15]
+comp -> cong [beta = -0.4]
+comp -> churn [beta = 0.9]
+}")
+
+plot(graphLayout(g))
+
+N <- 100000
+```
+
+We'll also assume that the relationships are linear with the following coefficients:
+
+$\beta_{cong\rightarrow churn} = 0.15$
+$\beta_{comp\rightarrow cong} = -0.4$
+$\beta_{comp\rightarrow churn} = 0.9$
+
+The effect of increasing congestion on churn $\delta \text{churn} / \delta \text{cong}$ is:
+
+$$\delta \text{churn} / \delta \text{cong} = \beta_{cong\rightarrow churn} = 0.15$$
+
+Below I simulate a dataset from the above graph with `r N` observations
+
+```{r simulate dataset}
+sim_data <- simulateSEM(g, N = N, standardized = T)
+```
+
+If we were to plot the relation between congestion and churn we would get:
+
+```{r plot bi-variate relation}
+sim_data %>%
+  ggplot(aes(cong, churn)) +
+  geom_point(alpha = 0.05) + geom_smooth(method = "lm")
+```
+
+Fitting the linear model:
+
+$$churn = \beta_1cong + \epsilon$$
+
+```{r fit model1}
+model <- lm(churn ~ cong, data = sim_data)
+```
+
+We get the following coefficients:
+
+```{r model coefficients, results = "asis"}
+pandoc.table(coefficients(model))
+```
+
+We get the opposite relationship than what we'd expect!
+Notionaly we know that may arise due to competition being a confounding variable. We usually fix confounding variables by "controlling" for as many things we can.
+
+If we fit the model:
+
+$$churn = \beta_1cong + \beta_2comp + \epsilon$$
+
+```{r fit model2}
+model <- lm(churn ~ cong + comp, data = sim_data)
+```
+
+We get the following coefficients:
+
+```{r model coefficients2, results = "asis"}
+pandoc.table(coefficients(model))
+```
+
+Obtaining the true congestion effect.
+
+## Blocking variable
+
+Next let's assume we also measure:  
+
+* CX: Customer experience (e.g. buffering events/calls to care)  
+
+
+We'll assume the graph below depicts the causal relatioships between the all measured variables:
+
+```{r define model 2}
+g <- dagitty("dag {
+churn [outcome]
+cong [exposure]
+cong -> CX [beta = -0.3]
+CX -> churn [beta = -0.5]
+comp -> cong [beta = -0.4]
+comp -> churn [beta = 0.9]
+}")
+
 plot(graphLayout(g))
 ```
 
-```{r list conditional independnecies}
-print(impliedConditionalIndependencies(g))
+We'll also assume that the relationships are linear with the following coefficients:
+
+$\beta_{cong\rightarrow CX} = -0.3$
+$\beta_{CX\rightarrow churn} = -0.5$
+$\beta_{comp\rightarrow cong} = -0.4$
+$\beta_{comp\rightarrow churn} = 0.9$
+
+The effect of increasing congestion on churn $\delta \text{churn} / \delta \text{cong}$ in this case is:
+
+$$\delta \text{churn} / \delta \text{cong} = \beta_{cong\rightarrow CX} \cdot \beta_{CX\rightarrow churn} = 0.15$$
+
+This time around if we use all the measures variables in our regression: 
+
+$$churn = \beta_1cong + \beta_2comp + \beta_3CX + \epsilon$$
+```{r fit model3, results = "asis"}
+sim_data <- simulateSEM(g, N = N, standardized = T)
+model <- lm(churn ~ ., data = sim_data)
+pandoc.table(coefficients(model))
 ```
 
-## Generate new observations
+We can see that the coefficient of congestion is about 0. This happens because conditioning CX blocks the path from cong to churn.
 
-```{r simulate dataset}
-sim_data <- simulateSEM(g, N = 100000)
+If we instead fit the model:
+
+$$churn = \beta_1cong + \beta_2comp + \epsilon$$
+
+```{r fit model4}
+model <- lm(churn ~ cong + comp, data = sim_data)
+```
+We get the following coefficients:
+
+```{r model coefficients3, results = "asis"}
+pandoc.table(coefficients(model))
+```
+Obtaining the true congestion effect.
+
+## Collider nodes (advanced)
+
+Next let's assume we also measure:  
+
+* brand: Our company's brand (e.g. we suck, we're the best in the market)  
+* demo: Demographics (rich population, dense population etc)  
+
+We'll assume the graph below depicts the causal relatioships between the all measured variables:
+
+```{r define model 3}
+g <- dagitty("dag {
+churn [outcome]
+cong [exposure]
+cong -> CX [beta = -0.3]
+CX -> churn [beta = -0.5]
+comp -> cong [beta = -0.4]
+comp -> churn [beta = 0.9]
+cong -> brand [beta = -0.8]
+brand -> comp [beta = 0.7]
+demo -> comp [beta = 0.4]
+demo -> churn [beta = -0.7]
+}")
+
+plot(graphLayout(g))
 ```
 
-# Estimate model
+This time around neither conditioning on comp neither using all variables will help us. We'll have to use grpahical model math to discover that we need to condition on: $\{comp, demo\}$.
 
-## Estimate model structure
+So running the model:
 
-```{r find graph}
+$$churn = \beta_1cong + \beta_2comp + \beta_3 demo + \epsilon$$
+
+```{r fit model5}
+sim_data <- simulateSEM(g, N = N, standardized = T)
+model <- lm(churn ~ cong + comp + demo, data = sim_data)
+```
+We get the following coefficients:
+
+```{r model coefficients4, results = "asis"}
+pandoc.table(coefficients(model))
+```
+
+Obtaining the true congestion effect.
+
+
+# Estimate model structure
+
+R has a package I dont understand yet that enables infering the model "skeleton" based on the data and an assumption about the maximum possible interaction depth. 
+
+```{r find graph skeleton}
 mfit <- mgm(sim_data, type = rep("g", ncol(sim_data)), level = rep(1, ncol(sim_data)), k = 3, verbatim = T)
 FactorGraph(mfit, labels = names(sim_data))
 ```
 
-Looks like the nodewise regression model was able to reconstruct correctly the model structure. Now it's up to the data scientist to determine the diretions of the arrows based on domain knowledge. 
+We can see that we're able to find the skeleton correctly.
 
-## Find coeffcients
-
-Assuming one was able to correctly identify the arrow directions I'll now compare the estimated overall effect of X on U running a regular regression, and when adjusting correctly. We know that the true overall effect is:
-
-```{r true effects table, results = "asis"}
-pander::pandoc.table(data.frame(variable = c("Z", "W", "X", "Y"), overall_effect = c(-0.08, 0.2, 0.07, 0)))
-```
-
-### Naive model
-
-```{r, results = "asis"}
-naive_model <- lm(U ~ ., data = sim_data)
-pander::pandoc.table(coefficients(naive_model))
-```
-
-The naive model only gets $\beta_W$ right, missing on the others
-
-### Causal inference
-
-To get X we need to condition on Z only:
-
-```{r, results = "asis"}
-x_model <- lm(U ~ X + Z, data = sim_data)
-pander::pandoc.table(coefficients(x_model))
-```
-
-To get Z it's the same and we can see it above. 
-
-We can also see Y can't affect U.

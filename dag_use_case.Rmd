@@ -1,5 +1,5 @@
 ---
-title: "Graphical models simulation exploration"
+title: "DAG use case"
 author: "Iyar Lin"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -36,7 +36,9 @@ if (!require(dagitty)) {
 }
 ```
 
-# Examples where having the model graph is crucial  
+# Intro
+This script demonstrates the need and use case for DAGs.
+
 ## Confounding variable example
 
 Let's assume we measure the following variables:
@@ -224,16 +226,4 @@ pandoc.table(coefficients(model))
 ```
 
 Obtaining the true congestion effect.
-
-
-# Estimate model structure
-
-R has a package I dont understand yet that enables infering the model "skeleton" based on the data and an assumption about the maximum possible interaction depth. 
-
-```{r find graph skeleton}
-mfit <- mgm(sim_data, type = rep("g", ncol(sim_data)), level = rep(1, ncol(sim_data)), k = 3, verbatim = T)
-FactorGraph(mfit, labels = names(sim_data))
-```
-
-We can see that we're able to find the skeleton correctly.
 

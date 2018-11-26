@@ -1,16 +1,17 @@
-Graphical models simulation exploration
+DAG use case
 ================
 Iyar Lin
-22 November, 2018
+26 November, 2018
 
--   [Examples where having the model graph is crucial](#examples-where-having-the-model-graph-is-crucial)
+-   [Intro](#intro)
     -   [Confounding variable example](#confounding-variable-example)
     -   [Blocking variable](#blocking-variable)
     -   [Collider nodes (advanced)](#collider-nodes-advanced)
--   [Estimate model structure](#estimate-model-structure)
 
-Examples where having the model graph is crucial
-================================================
+Intro
+=====
+
+This script demonstrates the need and use case for DAGs.
 
 Confounding variable example
 ----------------------------
@@ -35,7 +36,7 @@ comp -> churn [beta = 0.9]
 plot(graphLayout(g))
 ```
 
-![](graphical_models_simulation_exploration_files/figure-markdown_github/define%20model1%20and%20plot-1.png)
+![](dag_use_case_files/figure-markdown_github/define%20model1%20and%20plot-1.png)
 
 ``` r
 N <- 100000
@@ -63,7 +64,7 @@ sim_data %>%
   geom_point(alpha = 0.05) + geom_smooth(method = "lm")
 ```
 
-![](graphical_models_simulation_exploration_files/figure-markdown_github/plot%20bi-variate%20relation-1.png)
+![](dag_use_case_files/figure-markdown_github/plot%20bi-variate%20relation-1.png)
 
 Fitting the linear model:
 
@@ -160,7 +161,7 @@ comp -> churn [beta = 0.9]
 plot(graphLayout(g))
 ```
 
-![](graphical_models_simulation_exploration_files/figure-markdown_github/define%20model%202-1.png)
+![](dag_use_case_files/figure-markdown_github/define%20model%202-1.png)
 
 We'll also assume that the relationships are linear with the following coefficients:
 
@@ -272,7 +273,7 @@ demo -> churn [beta = -0.1]
 plot(graphLayout(g))
 ```
 
-![](graphical_models_simulation_exploration_files/figure-markdown_github/define%20model%203-1.png)
+![](dag_use_case_files/figure-markdown_github/define%20model%203-1.png)
 
 This time around neither conditioning on comp neither using all variables will help us. We'll have to use grpahical model math to discover that we need to condition on:
 
@@ -324,22 +325,3 @@ pandoc.table(coefficients(model))
 </table>
 
 Obtaining the true congestion effect.
-
-Estimate model structure
-========================
-
-R has a package I dont understand yet that enables infering the model "skeleton" based on the data and an assumption about the maximum possible interaction depth.
-
-``` r
-mfit <- mgm(sim_data, type = rep("g", ncol(sim_data)), level = rep(1, ncol(sim_data)), k = 3, verbatim = T)
-```
-
-    ## Note that the sign of parameter estimates is stored separately; see ?mgm
-
-``` r
-FactorGraph(mfit, labels = names(sim_data))
-```
-
-![](graphical_models_simulation_exploration_files/figure-markdown_github/find%20graph%20skeleton-1.png)
-
-We can see that we're able to find the skeleton correctly.

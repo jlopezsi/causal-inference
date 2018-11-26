@@ -5,7 +5,6 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   pdf_document:
     toc: true
-    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -131,7 +130,12 @@ Where $Z$ is a variable set satisfying the backdoor criteria (A.K.A "adjustment 
 
 The ATE is given by:
 
-$$\mathbb{E}(Y|do(X=x))=\sum_y\sum_zyP(Y=y|X=x,Z=z)P(Z=z)=\sum_zP(Z=z)\sum_yyP(Y=y|X=x,Z=z)=\sum_zP(Z=z)\mathbb{E}(Y|x,z)$$
+\begin{equation}
+  \begin{gathered}
+\mathbb{E}(Y|do(X=x)) =\sum_y\sum_zyP(Y=y|X=x,Z=z)P(Z=z) = \\ \sum_zP(Z=z)\sum_yyP(Y=y|X=x,Z=z) = \sum_zP(Z=z)\mathbb{E}(Y|x,z)
+  \end{gathered}
+\end{equation}
+
 We usually use regular machine learning framworks to estimate $\mathbb{E}(Y|x,z)$. When we predict for the original dataset we have the join probability of Z: $P(Z=z)$ preserved so no need to estimate it. I'll validate that in the results below.
 
 Looking at the graph below: 

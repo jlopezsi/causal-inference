@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
+knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F, tidy = T)
 set.seed(1)
 options(scipen = 999)
 
@@ -34,7 +34,7 @@ if (!require(dagitty)) {
 ```
 
 # Intro  
-Assuming we're able to find the DAG underlying the dataset, this script demonstrates average treatment effect (ATE) estimation.
+Assuming we're able to find the DAG underlying the dataset, this script demonstrates average treatment effect (ATE) estimation using the backdoor criteria.
 
 # Define model and simulate dataset
 
@@ -206,3 +206,58 @@ for(i in 1:length(interventions)){
 pandoc.table(data.frame(intervention = interventions, ATE = ATE))
 ```
 Looks like we're getting similar results! So no need to estimate density!
+
+# Does the size of the adjustment set follows the same variance-bias trade off as in classic ML?
+
+Let's look at the DAG below:
+
+```{r define model 2}
+g <- dagitty("dag {
+Y [outcome]
+X [exposure]
+X -> Y [beta = 0.2]
+Z1 -> X [beta = 0.1]
+Z1 -> Z2 [beta = -0.1]
+Z2 -> X [beta = 0.3]
+Z2 -> Y [beta = 0.05]
+Z3 -> Z2 [beta = -0.05]
+Z3 -> Y [beta = -0.1]
+}")
+
+plot(graphLayout(g))
+```
+
+If we're interesting in estimating $\mathbb{E}(Y|do(X=x)$ there's several confounding paths that we need to block.
+
+The exact possible adjustment sets are:
+
+```{r print adjustment sets2}
+M = 1000
+print(adjustmentSets(g, type = "all"))
+```
+
+We can see that we can either control for 2 or 3 out of the confounding variables. Assuming we can measure them all, and we know from the graph they are all "relevant" (e.g. not white noise) does it make sense to use all 3 instead of just a subset?
+
+Below I simulate `r M` dataset for a grid of sample size N and compare the standard deviation of each:
+
+```{r simulate model 2 data}
+N_grid <- seq(4, 40, 10)
+model_sd <- data.frame(model = rep(c("small", "large"), length(N_grid)), 
+                      N = rep(N_grid, each = 2), 
+                      sd = NA)
+
+for(n in N_grid){
+  sim_data <- replicate(M, simulateSEM(g, N = n), simplify = F)
+  model_sd$sd[model_sd$N == n & model_sd$model == "small"] <- sd(sapply(sim_data, function(data) coef(lm(Y ~ X + Z1 + Z2, data = data))[2]))
+  model_sd$sd[model_sd$N == n & model_sd$model == "large"] <- sd(sapply(sim_data, function(data) coef(lm(Y ~ X + Z1 + Z2 + Z3, data = data))[2]))
+}
+
+```
+
+Below are the sd results:
+
+```{r print results}
+model_sd %>% ggplot(aes(N, log(sd), color = model)) + geom_line()
+```
+
+So interestingly enough when we have a perfectly unbiased estimator it doesn't matter how many variables we're conditioning on.

@@ -238,26 +238,48 @@ print(adjustmentSets(g, type = "all"))
 
 We can see that we can either control for 2 or 3 out of the confounding variables. Assuming we can measure them all, and we know from the graph they are all "relevant" (e.g. not white noise) does it make sense to use all 3 instead of just a subset?
 
-Below I simulate `r M` dataset for a grid of sample size N and compare the standard deviation of each:
+Below I simulate `r M` dataset for a grid of sample size N and compare the standard deviation of the coefficient estimate as well as the R-squered on a hold out test set:
 
 ```{r simulate model 2 data}
 N_grid <- seq(4, 40, 10)
-model_sd <- data.frame(model = rep(c("small", "large"), length(N_grid)), 
+model_performance <- data.frame(model = rep(c("small", "large"), length(N_grid)), 
                       N = rep(N_grid, each = 2), 
-                      sd = NA)
+                      sd = NA, 
+                      R_2 = NA)
 
 for(n in N_grid){
   sim_data <- replicate(M, simulateSEM(g, N = n), simplify = F)
-  model_sd$sd[model_sd$N == n & model_sd$model == "small"] <- sd(sapply(sim_data, function(data) coef(lm(Y ~ X + Z1 + Z2, data = data))[2]))
-  model_sd$sd[model_sd$N == n & model_sd$model == "large"] <- sd(sapply(sim_data, function(data) coef(lm(Y ~ X + Z1 + Z2 + Z3, data = data))[2]))
+  sim_test_data <- replicate(M, simulateSEM(g, N = n), simplify = F)
+  sim_small_model <- lapply(sim_data, function(data) lm(Y ~ X + Z1 + Z2, data = data))
+  sim_large_model <- lapply(sim_data, function(data) lm(Y ~ X + Z1 + Z2 + Z3, data = data))
+  
+  model_performance$sd[model_performance$N == n & model_performance$model == "small"] <- sd(sapply(sim_small_model, function(model) coef(model)[2]))
+  model_performance$sd[model_performance$N == n & model_performance$model == "large"] <- sd(sapply(sim_large_model, function(model) coef(model)[2]))
+  
+  model_performance$R_2[model_performance$N == n & model_performance$model == "small"] <- mean(mapply(function(data, model){
+    sqrt(mean((predict(model, data) - data$Y)^2))
+  }, 
+  data = sim_test_data, model = sim_small_model))
+  
+  model_performance$R_2[model_performance$N == n & model_performance$model == "large"] <- mean(mapply(function(data, model){
+    sqrt(mean((predict(model, data) - data$Y)^2))
+  }, 
+  data = sim_test_data, model = sim_large_model))
+  
 }
 
 ```
 
 Below are the sd results:
 
-```{r print results}
-model_sd %>% ggplot(aes(N, log(sd), color = model)) + geom_line()
+```{r print sd results}
+model_performance %>% ggplot(aes(N, log(sd), color = model)) + geom_line()
 ```
 
-So interestingly enough when we have a perfectly unbiased estimator it doesn't matter how many variables we're conditioning on.
+Below are the R-squared results:
+
+```{r print R-squared results}
+model_performance %>% ggplot(aes(N, log(R_2), color = model)) + geom_line()
+```
+
+Oddly enough it looks like if anything, using less variables is better!

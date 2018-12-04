@@ -1,5 +1,5 @@
 ---
-title: "Estimating average treatment effect"
+title: "Estimating average treatment effect for mixed variable domain graphical models"
 author: "Iyar Lin"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F, tidy = T)
+knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
 set.seed(1)
 options(scipen = 999)
 
@@ -16,7 +16,7 @@ packages <- c(
   "devtools", # install_github
   "tidyverse", # best thing that happend to me
   "pander", # table rendering
-  "rpart" # rpart function
+  "mgm" # mgm
 )
 
 sapply(
@@ -34,7 +34,7 @@ if (!require(dagitty)) {
 ```
 
 # Intro  
-Assuming we're able to find the DAG underlying the dataset, this script demonstrates average treatment effect (ATE) estimation using the backdoor criteria.
+Most real world cases involve working with mixed domain datasets (i.e continuous, count and categorical) rather than just gaussian continuous. In this script I show how the ATE can be estimated.
 
 # Define model and simulate dataset
 
@@ -121,7 +121,22 @@ Y <- mapply(function(z,w){
 sim_data <- data.frame(X,Y,Z,W)
 ```
 
+# Estimate model DAG
+
+In case domain knowledge is not enough to construct a reliable graph, the "mgm" package enables crude estimation of the model graph
+
+```{r estimate model graph}
+sim_data_for_mgm <- sim_data %>% 
+  mutate(X = as.integer(X))
+estimated_dag <- mgm(data = sim_data_for_mgm, type = c("c", "g", "g", "p"), level = c(3, rep(1, 3)), verbatim = T)
+FactorGraph(estimated_dag, labels = names(sim_data_for_mgm), PairwiseAsEdge = T)
+```
+
+We can see that the result is close, but there is a redundant edge between Z and W. Also, it's un-oriented. More work is done at: https://github.com/benoslab/causalMGM
+
 # Estimate average treatment effect (ATE)
+
+Below I assume the correct oriented DAG is used.
 
 In Pearl eq 3.5 (p. 57) the post intervention of $Y$ given $do(X=x)$ is given by
 
@@ -136,7 +151,7 @@ The ATE is given by:
   \end{gathered}
 \end{equation}
 
-We usually use regular machine learning framworks to estimate $\mathbb{E}(Y|x,z)$. When we predict for the original dataset we have the join probability of Z: $P(Z=z)$ preserved so no need to estimate it. I'll validate that in the results below.
+We usually use regular machine learning framworks to estimate $\mathbb{E}(Y|x,z)$. When we predict for the original dataset we have the joint probability of Z: $P(Z=z)$ preserved so no need to estimate it. I'll validate that in the results below.
 
 Looking at the graph below: 
 
@@ -144,7 +159,12 @@ Looking at the graph below:
 plot(graphLayout(g))
 ```
 
-we can see that the adjustment set is $Z=\{Z\}$.
+we can see that the adjustment set is:
+
+```{r get adjustment set}
+print(adjustmentSets(g))
+```
+
 
 We'll use a linear regression to estimate $\mathbb{E}(Y|x,z)$.
 
@@ -206,80 +226,3 @@ for(i in 1:length(interventions)){
 pandoc.table(data.frame(intervention = interventions, ATE = ATE))
 ```
 Looks like we're getting similar results! So no need to estimate density!
-
-# Does the size of the adjustment set follows the same variance-bias trade off as in classic ML?
-
-Let's look at the DAG below:
-
-```{r define model 2}
-g <- dagitty("dag {
-Y [outcome]
-X [exposure]
-X -> Y [beta = 0.2]
-Z1 -> X [beta = 0.1]
-Z1 -> Z2 [beta = -0.1]
-Z2 -> X [beta = 0.3]
-Z2 -> Y [beta = 0.05]
-Z3 -> Z2 [beta = -0.05]
-Z3 -> Y [beta = -0.1]
-}")
-
-plot(graphLayout(g))
-```
-
-If we're interesting in estimating $\mathbb{E}(Y|do(X=x)$ there's several confounding paths that we need to block.
-
-The exact possible adjustment sets are:
-
-```{r print adjustment sets2}
-M = 1000
-print(adjustmentSets(g, type = "all"))
-```
-
-We can see that we can either control for 2 or 3 out of the confounding variables. Assuming we can measure them all, and we know from the graph they are all "relevant" (e.g. not white noise) does it make sense to use all 3 instead of just a subset?
-
-Below I simulate `r M` dataset for a grid of sample size N and compare the standard deviation of the coefficient estimate as well as the R-squered on a hold out test set:
-
-```{r simulate model 2 data}
-N_grid <- seq(4, 40, 10)
-model_performance <- data.frame(model = rep(c("small", "large"), length(N_grid)), 
-                      N = rep(N_grid, each = 2), 
-                      sd = NA, 
-                      R_2 = NA)
-
-for(n in N_grid){
-  sim_data <- replicate(M, simulateSEM(g, N = n), simplify = F)
-  sim_test_data <- replicate(M, simulateSEM(g, N = n), simplify = F)
-  sim_small_model <- lapply(sim_data, function(data) lm(Y ~ X + Z1 + Z2, data = data))
-  sim_large_model <- lapply(sim_data, function(data) lm(Y ~ X + Z1 + Z2 + Z3, data = data))
-  
-  model_performance$sd[model_performance$N == n & model_performance$model == "small"] <- sd(sapply(sim_small_model, function(model) coef(model)[2]))
-  model_performance$sd[model_performance$N == n & model_performance$model == "large"] <- sd(sapply(sim_large_model, function(model) coef(model)[2]))
-  
-  model_performance$R_2[model_performance$N == n & model_performance$model == "small"] <- mean(mapply(function(data, model){
-    sqrt(mean((predict(model, data) - data$Y)^2))
-  }, 
-  data = sim_test_data, model = sim_small_model))
-  
-  model_performance$R_2[model_performance$N == n & model_performance$model == "large"] <- mean(mapply(function(data, model){
-    sqrt(mean((predict(model, data) - data$Y)^2))
-  }, 
-  data = sim_test_data, model = sim_large_model))
-  
-}
-
-```
-
-Below are the sd results:
-
-```{r print sd results}
-model_performance %>% ggplot(aes(N, log(sd), color = model)) + geom_line()
-```
-
-Below are the R-squared results:
-
-```{r print R-squared results}
-model_performance %>% ggplot(aes(N, log(R_2), color = model)) + geom_line()
-```
-
-Oddly enough it looks like if anything, using less variables is better!

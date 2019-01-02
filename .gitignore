@@ -5,3 +5,4 @@
 *.rds
 *__packages
 *.Rhistory
+*.DS_Store

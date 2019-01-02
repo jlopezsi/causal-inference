@@ -1,0 +1,57 @@
+---
+title: "Play around with BART"
+author: "Iyar Lin"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  github_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
+set.seed(1)
+options(scipen = 999)
+
+packages <- c(
+  "tidyverse", # best thing that happend to me
+  "pander", # table rendering
+  "ranger"
+)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = packages)
+
+if (!require("bartCause")) pacman::p_install_gh("vdorie/bartCause")
+if (!require("aciccomp2016")) pacman::p_install_gh("vdorie/aciccomp/2016")
+```
+
+# Motivation
+
+In this script I explore using the BART algorithm for causal inference on the Atlantic causal inference conference 2016 competition data. The setting is of strong ignorability (e.g. no hidden confounders).
+
+# Load competition data
+
+```{r}
+sample <- as.data.frame(dgp_2016(aciccomp2016::input_2016, 4, 4))
+try <- bartc(response = sample$y, treatment = sample$z, confounders = input_2016)
+individual_effect_est <- (apply(try$yhat.obs, 1, mean) - apply(try$yhat.cf, 1, mean))*(2*try$trt - 1)
+actual <- sample$mu.1 - sample$mu.0
+sqrt(mean((actual - individual_effect_est)^2))
+plot(actual, individual_effect_est)
+
+try2 <- bartc(response = sample$y, treatment = sample$z, confounders = input_2016, method.rsp = "tmle", method.trt = "glm")
+individual_effect_est2 <- (apply(try2$yhat.obs, 1, mean) - apply(try2$yhat.cf, 1, mean))*(2*try2$trt - 1)
+sqrt(mean((actual - individual_effect_est2)^2))
+plot(actual, individual_effect_est2)
+
+full_data <- data.frame(y = sample$y, z = sample$z, input_2016)
+
+try3 <- ranger(y ~ ., always.split.variables = "z", data = full_data)
+individual_effect_est3 <- predict(try3, full_data %>% mutate(z = 1))$predictions - 
+  predict(try3, full_data %>% mutate(z = 0))$predictions
+
+sqrt(mean((actual - individual_effect_est3)^2))
+plot(actual, individual_effect_est)
+
+```
+

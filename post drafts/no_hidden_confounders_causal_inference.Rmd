@@ -1,5 +1,5 @@
 ---
-title: "Play around with BART"
+title: "No hidden confounders causal inference"
 author: "Iyar Lin"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
@@ -22,7 +22,7 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(char = packages)
 
 if (!require("bartCause")) pacman::p_install_gh("vdorie/bartCause")
-if (!require("aciccomp2016")) pacman::p_install_gh("vdorie/aciccomp/2016")
+if (!require("aciccomp2017")) pacman::p_install_gh("vdorie/aciccomp/2017")
 ```
 
 # Motivation
@@ -32,7 +32,7 @@ In this script I explore using the BART algorithm for causal inference on the At
 # Load competition data
 
 ```{r}
-sample <- as.data.frame(dgp_2016(aciccomp2016::input_2016, 4, 4))
+sample <- as.data.frame(dgp_2017(aciccomp2017::input_2017, 4, 4))
 try <- bartc(response = sample$y, treatment = sample$z, confounders = input_2016)
 individual_effect_est <- (apply(try$yhat.obs, 1, mean) - apply(try$yhat.cf, 1, mean))*(2*try$trt - 1)
 actual <- sample$mu.1 - sample$mu.0

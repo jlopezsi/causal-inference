@@ -1,7 +1,7 @@
 "Correlation is not causation". So what is?
 ================
 Iyar Lin
-02 January, 2019
+03 January, 2019
 
 Intro
 =====
@@ -149,7 +149,7 @@ When running the regression ![sales = r\_0 + r\_1mkt + r\_2visits + r\_3comp + \
 </tbody>
 </table>
 
-Now it looks like marketing has almost no effect at all! Since we simulated the data from a set of linear equations we know that using more sophisticated models (e.g. XGBoost, GAMs) can't produce better results (I entourage the skeptic reader to try this out by re-running the accompanying Rmd script).
+Now it looks like marketing has almost no effect at all! Since we simulated the data from a set of linear equations we know that using more sophisticated models (e.g. XGBoost, GAMs) can't produce better results (I entourage the skeptic reader to try this out by re-running the [Rmd script](https://github.com/IyarLin/causal-inference/blob/master/correlation_is_not_causation_so_what_is.Rmd) used to produce this report).
 
 Maybe we should consider the relation between features too...
 =============================================================
@@ -162,7 +162,7 @@ We can visualize these feature inter-dependencies with a directed a-cyclic graph
 
 ![](correlation_is_not_causation_so_what_is_files/figure-markdown_github/plot%20DAG2-1.png)
 
-So it would make sense to account for the competition by adding it to our regression. Adding visits to our model however somehow "blocks" or "absorbs" the effect of marketing on sales so we should omit it from our model.
+So it would make sense to account for the confounding competition by adding it to our regression. Adding visits to our model however somehow "blocks" or "absorbs" the effect of marketing on sales so we should omit it from our model.
 
 Fitting the model ![sales = r\_0 + r\_1mkt + r\_2comp + \\epsilon](https://latex.codecogs.com/png.latex?sales%20%3D%20r_0%20%2B%20r_1mkt%20%2B%20r_2comp%20%2B%20%5Cepsilon "sales = r_0 + r_1mkt + r_2comp + \epsilon") yields the coefficients below:
 
@@ -190,19 +190,19 @@ Fitting the model ![sales = r\_0 + r\_1mkt + r\_2comp + \\epsilon](https://latex
 
 Now we finally got the right effect estimate!
 
-The way we got there was a bit shaky though. We came up with general concepts around "confounding" and "blocking" of features. Trying to apply that to a datasets consisting of tens of variables with complicated relationships would probably prove tremendously hard.
+The way we got there was a bit shaky though. We came up with general concepts around "confounding" and "blocking" of features. Trying to apply those to datasets consisting of tens of variables with complicated relationships would probably prove tremendously hard.
 
 So now what? Causal inference!
 ==============================
 
-So far we've seen that when trying to estimate the effect of marketing spend on sales by examining bi-variate plots can fail bad. We've also seen that standard ML practices of throwing all available features into our model can fail too. It would seem we need to carefully construct the set of covariates included in our model in order to obtain the true effect.
+So far we've seen that trying to estimate the effect of marketing spend on sales by examining bi-variate plots can fail bad. We've also seen that standard ML practices of throwing all available features into our model can fail too. It would seem we need to carefully construct the set of covariates included in our model in order to obtain the true effect.
 
 In causal inference this covariate set is also termed "adjustment set". Given a model DAG we can utilize various algorithms that rely on rules in similar spirit to the considerations we mentioned above such as "confounding" and "blocking", to find the correct adjustment set.
 
 Backdoor criteria
 -----------------
 
-One of the most basic algorithms that search for the adjustment set is the "Backdoor-criteria" developed by J. Pearl. In a nutshell it seeks adjustment sets that block every "spurious" paths between our "exposure" variable (e.g. marketing) and "outcome" variable (e.g. sales) while keeping directed baths open.
+One of the most basic algorithms that can obtain the correct adjustment set is the "Backdoor-criteria" developed by J. Pearl. In a nutshell it seeks adjustment sets that block every "spurious" paths between our "exposure" variable (e.g. marketing) and "outcome" variable (e.g. sales) while keeping directed baths open.
 
 Consider for example the DAG below where we're interested in finding the effect of x5 on x10:
 
@@ -220,6 +220,8 @@ Finding the model DAG can be admittedly challenging. It can be done using any co
 -   Use domain knowledge
 -   Given a few candidate model DAGs one can perform statistical tests to compare their fit to the data at hand
 -   Use search algorithms (e.g. those implemented in the R "mgm" package)
+
+I'll touch upon this subject in more breadth in a future post.
 
 Further reading
 ---------------

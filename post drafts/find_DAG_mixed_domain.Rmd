@@ -33,6 +33,8 @@ if (!require(dagitty)) {
 }
 ```
 
+use bnlearn!
+
 # Intro  
 Most real world cases involve working with mixed domain datasets (i.e continuous, count and categorical) rather than just gaussian continuous. In this script I show how the ATE can be estimated.
 
@@ -119,6 +121,8 @@ Y <- mapply(function(z,w){
   }, Z, W)
 
 sim_data <- data.frame(X,Y,Z,W)
+
+grpah <- iamb(sim_data %>% mutate(W = as.numeric(W)))
 ```
 
 # Estimate model DAG

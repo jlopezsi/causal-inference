@@ -1,7 +1,7 @@
 "Correlation is not causation". So what is?
 ================
 Iyar Lin
-03 January, 2019
+29 January, 2019
 
 Intro
 =====
@@ -11,7 +11,21 @@ Machine learning applications have been growing in volume and scope rapidly over
 A typical data science task
 ===========================
 
-Imagine we're tasked by the marketing team to find the effect of raising marketing spend on sales. We have at our disposal records of marketing spend (mkt), visits to our website (visits), sales, and competition index (comp). Below are the first few rows of the dataset:
+Imagine we're tasked by the marketing team to find the effect of raising marketing spend on sales. We have at our disposal records of marketing spend (mkt), visits to our website (visits), sales, and competition index (comp).
+
+We'll simulate a dataset using a set of equations (also called structural equations):
+
+![sales = \\beta\_1vists + \\beta\_2comp + \\epsilon\_1](https://latex.codecogs.com/png.latex?sales%20%3D%20%5Cbeta_1vists%20%2B%20%5Cbeta_2comp%20%2B%20%5Cepsilon_1 "sales = \beta_1vists + \beta_2comp + \epsilon_1")
+
+![vists = \\beta\_3mkt + \\epsilon\_2](https://latex.codecogs.com/png.latex?vists%20%3D%20%5Cbeta_3mkt%20%2B%20%5Cepsilon_2 "vists = \beta_3mkt + \epsilon_2")
+
+![mkt = \\beta\_4comp + \\epsilon\_3](https://latex.codecogs.com/png.latex?mkt%20%3D%20%5Cbeta_4comp%20%2B%20%5Cepsilon_3 "mkt = \beta_4comp + \epsilon_3")
+
+with ![\\{\\beta\_1, \\beta\_2, \\beta\_3\\, \\beta\_4\\} = \\{0.3, -0.9, 0.5, 0.6\\}](https://latex.codecogs.com/png.latex?%5C%7B%5Cbeta_1%2C%20%5Cbeta_2%2C%20%5Cbeta_3%5C%2C%20%5Cbeta_4%5C%7D%20%3D%20%5C%7B0.3%2C%20-0.9%2C%200.5%2C%200.6%5C%7D "\{\beta_1, \beta_2, \beta_3\, \beta_4\} = \{0.3, -0.9, 0.5, 0.6\}")
+
+All data presented in graphs or used to fit models below is simulated from the above equations.
+
+Below are the first few rows of the dataset:
 
 <table style="width:46%;">
 <colgroup>
@@ -68,18 +82,6 @@ Imagine we're tasked by the marketing team to find the effect of raising marketi
 </tbody>
 </table>
 
-We'll simulate a dataset using a set of equations (also called structural equations):
-
-![sales = \\beta\_1vists + \\beta\_2comp + \\epsilon\_1](https://latex.codecogs.com/png.latex?sales%20%3D%20%5Cbeta_1vists%20%2B%20%5Cbeta_2comp%20%2B%20%5Cepsilon_1 "sales = \beta_1vists + \beta_2comp + \epsilon_1")
-
-![vists = \\beta\_3mkt + \\epsilon\_2](https://latex.codecogs.com/png.latex?vists%20%3D%20%5Cbeta_3mkt%20%2B%20%5Cepsilon_2 "vists = \beta_3mkt + \epsilon_2")
-
-![mkt = \\beta\_4comp + \\epsilon\_3](https://latex.codecogs.com/png.latex?mkt%20%3D%20%5Cbeta_4comp%20%2B%20%5Cepsilon_3 "mkt = \beta_4comp + \epsilon_3")
-
-with ![\\{\\beta\_1, \\beta\_2, \\beta\_3\\, \\beta\_4\\} = \\{0.3, -0.9, 0.5, 0.6\\}](https://latex.codecogs.com/png.latex?%5C%7B%5Cbeta_1%2C%20%5Cbeta_2%2C%20%5Cbeta_3%5C%2C%20%5Cbeta_4%5C%7D%20%3D%20%5C%7B0.3%2C%20-0.9%2C%200.5%2C%200.6%5C%7D "\{\beta_1, \beta_2, \beta_3\, \beta_4\} = \{0.3, -0.9, 0.5, 0.6\}")
-
-All data presented in graphs or used to fit models below is simulated from the above equations.
-
 Our goal is to predict the effect of raising marketing spend on sales which is 0.15 (from the set of equations above, using product decomposition we get ![\\beta\_1 \\cdot \\beta\_3 = 0.3 \\cdot 0.5 = 0.15](https://latex.codecogs.com/png.latex?%5Cbeta_1%20%5Ccdot%20%5Cbeta_3%20%3D%200.3%20%5Ccdot%200.5%20%3D%200.15 "\beta_1 \cdot \beta_3 = 0.3 \cdot 0.5 = 0.15")).
 
 Common analysis approaches
@@ -92,9 +94,9 @@ Many of us would start off by plotting a scatter plot of sales by marketing:
 
 ![](correlation_is_not_causation_so_what_is_files/figure-markdown_github/plot%20scatter%20plot-1.png)
 
-We can see that the relationship seen in the graph is actually the opposite of what we'd expected! It looks like increasing marketing actually decreases sales. Indeed, not only correlation isn't causation, at times it can even show the opposite.
+We can see that the relationship seen in the graph is actually the opposite of what we'd expected! It looks like increasing marketing actually decreases sales. Indeed, not only correlation isn't causation, at times it can show a relation opposite to the true causation.
 
-Fitting a simple linear model ![sales = r\_0 + r\_1mkt + \\epsilon](https://latex.codecogs.com/png.latex?sales%20%3D%20r_0%20%2B%20r_1mkt%20%2B%20%5Cepsilon "sales = r_0 + r_1mkt + \epsilon") would yield the following coefficients (note ![r](https://latex.codecogs.com/png.latex?r "r") is a regression coefficient where's ![\\beta](https://latex.codecogs.com/png.latex?%5Cbeta "\beta") is a true parameter in the structural equations):
+Fitting a simple linear model ![sales = r\_0 + r\_1mkt + \\epsilon](https://latex.codecogs.com/png.latex?sales%20%3D%20r_0%20%2B%20r_1mkt%20%2B%20%5Cepsilon "sales = r_0 + r_1mkt + \epsilon") would yield the following coefficients: (note ![r](https://latex.codecogs.com/png.latex?r "r") is a regression coefficient where's ![\\beta](https://latex.codecogs.com/png.latex?%5Cbeta "\beta") is a true parameter in the structural equations)
 
 <table style="width:32%;">
 <colgroup>
@@ -149,18 +151,18 @@ When running the regression ![sales = r\_0 + r\_1mkt + r\_2visits + r\_3comp + \
 </tbody>
 </table>
 
-Now it looks like marketing has almost no effect at all! Since we simulated the data from a set of linear equations we know that using more sophisticated models (e.g. XGBoost, GAMs) can't produce better results (I entourage the skeptic reader to try this out by re-running the [Rmd script](https://github.com/IyarLin/causal-inference/blob/master/correlation_is_not_causation_so_what_is.Rmd) used to produce this report).
+Now it looks like marketing spend has almost no effect at all! Since we simulated the data from a set of linear equations we know that using more sophisticated models (e.g. XGBoost, GAMs) can't produce better results (I encourage the skeptic reader to try this out by re-running the [Rmd script](https://github.com/IyarLin/causal-inference/blob/master/correlation_is_not_causation_so_what_is.Rmd) used to produce this report).
 
 Maybe we should consider the relation between features too...
 =============================================================
 
-When consulting the marketing team we learn that in highly competitive markets the team would usually increase marketing spend (this is reflected in the coefficient ![\\beta\_4 = 0.6](https://latex.codecogs.com/png.latex?%5Cbeta_4%20%3D%200.6 "\beta_4 = 0.6") above). So it's possible that competition is a "confounding" factor since when we observe high marketing spend there's also high competition thus leading to lower sales.
+Quite baffled by the results obtained so far we turn to consult the marketing team and we learn that in highly competitive markets the team would usually increase marketing spend (this is reflected in the coefficient ![\\beta\_4 = 0.6](https://latex.codecogs.com/png.latex?%5Cbeta_4%20%3D%200.6 "\beta_4 = 0.6") above). So it's possible that competition is a "confounding" factor: when we observe high marketing spend there's also high competition thus leading to lower sales.
 
 Also, we notice that marketing probably affects visits to our site and those visits in turn affect sales.
 
 We can visualize these feature inter-dependencies with a directed a-cyclic graph (DAG):
 
-![](correlation_is_not_causation_so_what_is_files/figure-markdown_github/plot%20DAG2-1.png)
+![](correlation_is_not_causation_so_what_is_files/figure-markdown_github/plot%20DAG-1.png)
 
 So it would make sense to account for the confounding competition by adding it to our regression. Adding visits to our model however somehow "blocks" or "absorbs" the effect of marketing on sales so we should omit it from our model.
 
@@ -181,23 +183,23 @@ Fitting the model ![sales = r\_0 + r\_1mkt + r\_2comp + \\epsilon](https://latex
 </thead>
 <tbody>
 <tr class="odd">
-<td align="center">662.2</td>
-<td align="center">0.1524</td>
-<td align="center">-90.89</td>
+<td align="center">654.8</td>
+<td align="center">0.1494</td>
+<td align="center">-89.8</td>
 </tr>
 </tbody>
 </table>
 
 Now we finally got the right effect estimate!
 
-The way we got there was a bit shaky though. We came up with general concepts around "confounding" and "blocking" of features. Trying to apply those to datasets consisting of tens of variables with complicated relationships would probably prove tremendously hard.
+The way we got there was a bit shaky though. We came up with general concepts such as "confounding" and "blocking" of features. Trying to apply these to datasets consisting of tens of variables with complicated relationships would probably prove tremendously hard.
 
 So now what? Causal inference!
 ==============================
 
 So far we've seen that trying to estimate the effect of marketing spend on sales by examining bi-variate plots can fail bad. We've also seen that standard ML practices of throwing all available features into our model can fail too. It would seem we need to carefully construct the set of covariates included in our model in order to obtain the true effect.
 
-In causal inference this covariate set is also termed "adjustment set". Given a model DAG we can utilize various algorithms that rely on rules in similar spirit to the considerations we mentioned above such as "confounding" and "blocking", to find the correct adjustment set.
+In causal inference this covariate set is also termed "adjustment set". Given a model DAG we can utilize various algorithms that rely on rules very much like those mentioned above such as "confounding" and "blocking", to find the correct adjustment set.
 
 Backdoor criteria
 -----------------
@@ -208,7 +210,7 @@ Consider for example the DAG below where we're interested in finding the effect 
 
 ![](correlation_is_not_causation_so_what_is_files/figure-markdown_github/plot%20large%20DAG-1.png)
 
-Using the backdoor-criterion (implemented in the R package "dagitty") we can find the correct adjustment sets:
+Using the backdoor-criterion (implemented in the R package "dagitty") we can find the correct adjustment set:
 
 ![](correlation_is_not_causation_so_what_is_files/figure-markdown_github/plot%20adjustemnt%20sets-1.png)
 
@@ -219,13 +221,13 @@ Finding the model DAG can be admittedly challenging. It can be done using any co
 
 -   Use domain knowledge
 -   Given a few candidate model DAGs one can perform statistical tests to compare their fit to the data at hand
--   Use search algorithms (e.g. those implemented in the R "mgm" package)
+-   Use search algorithms (e.g. those implemented in the R "mgm" or "bnlearn" packages)
 
 I'll touch upon this subject in more breadth in a future post.
 
 Further reading
 ---------------
 
-To anyone curious to learn a bit more about the questions I've tried to answer in this report I'll recommend reading the light-weight Technical Report by Pearl: [The Seven Tools of Causal Inference with Reflections on Machine Learning](https://ftp.cs.ucla.edu/pub/stat_ser/r481.pdf).
+To anyone curious to learn a bit more about the questions I've tried to answer in this report I'll recommend reading the light-weight Technical Report by Pearl: [The Seven Tools of Causal Inference with Reflections on Machine Learning](https://github.com/IyarLin/causal-inference/blob/master/miscellaneous%20files/The%20Seven%20Pillars%20of%20Causal%20Reasoning%20with%20Reflections%20on%20Machine%20Learning%20Pearl%202018.pdf)
 
-For a more in-depth introduction to Causal inference and the DAG machinery I'd recommend getting Pearl's short book: [Causal Inference in Statistics - A Primer](https://www.amazon.com/Causal-Inference-Statistics-Judea-Pearl/dp/1119186846)
+For a more in-depth introduction to Causal inference and the DAG machinery I'd recommend getting Pearl's short book: [Causal Inference in Statistics - A Primer](http://bayes.cs.ucla.edu/PRIMER/)

@@ -5,53 +5,70 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   github_document:
     toc: true
+    pandoc_args: --webtex
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
 set.seed(1)
 options(scipen = 999)
 
 packages <- c(
   "tidyverse", # best thing that happend to me
   "pander", # table rendering
-  "ranger"
+  "grf", # causal forests
+  "rpart", # decision trees, 
+  "rpart.plot", # pretty plotting of rpart
+  "ranger" # random forests
 )
 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(char = packages)
 
-if (!require("bartCause")) pacman::p_install_gh("vdorie/bartCause")
-if (!require("aciccomp2017")) pacman::p_install_gh("vdorie/aciccomp/2017")
+if (!require("bartCause")) pacman::p_load_gh("vdorie/bartCause")
+if (!require("aciccomp2017")) pacman::p_load_gh("vdorie/aciccomp/2017")
 ```
 
-# Motivation
+# Intro
 
-In this script I explore using the BART algorithm for causal inference on the Atlantic causal inference conference 2016 competition data. The setting is of strong ignorability (e.g. no hidden confounders).
+In this post we'll restrict ourselves to the case of some binary treatment $X$ with $X = 1$ indicating treatment assignment and $X = 0$ control assignment. We're interested with estimating the average treatment effect (ATE) of $X$ on some continuous outcome variable $Y$. In mathmatical notation $\mathbb{E}(Y|X=1) - \mathbb{E}(Y|X=0)$. 
 
-# Load competition data
+We saw in a previous post ( ["Correlation is not causation". So what is?](https://github.com/IyarLin/causal-inference/blob/master/correlation_is_not_causation_so_what_is.md) ) that fitting a model $Y = f(X) + \epsilon$ and computing $\hat{ATE} = \hat{f}(1) - \hat{f}(0)$ won't do the trick if there's some confounding variable $Z$. In general we saw that we need to fit the model $Y = f(X,Z) + \epsilon$ where $Z$ is a set of varibels called "adjutment set". We can than estimate the ATE by $\hat{ATE} = \mathbb{E}_Z(\hat{f}(1, Z) - \hat{f}(0, Z))$
 
-```{r}
-sample <- as.data.frame(dgp_2017(aciccomp2017::input_2017, 4, 4))
-try <- bartc(response = sample$y, treatment = sample$z, confounders = input_2016)
-individual_effect_est <- (apply(try$yhat.obs, 1, mean) - apply(try$yhat.cf, 1, mean))*(2*try$trt - 1)
-actual <- sample$mu.1 - sample$mu.0
-sqrt(mean((actual - individual_effect_est)^2))
-plot(actual, individual_effect_est)
+Even after we find the correct adjustment set $Z$ we may still face some challenges which require the use of specially designed algorithms rather than the familiar run of the mill ML ones.
 
-try2 <- bartc(response = sample$y, treatment = sample$z, confounders = input_2016, method.rsp = "tmle", method.trt = "glm")
-individual_effect_est2 <- (apply(try2$yhat.obs, 1, mean) - apply(try2$yhat.cf, 1, mean))*(2*try2$trt - 1)
-sqrt(mean((actual - individual_effect_est2)^2))
-plot(actual, individual_effect_est2)
+## Relatively small effect size
 
-full_data <- data.frame(y = sample$y, z = sample$z, input_2016)
+Classic ML algorithms are geared towards accurate prediction of $f(X, Z)$, not $f(1,Z) - f(0,Z)$. If the effect of changing $X$ is small when compared with the effect of changes in some variables in $Z$ than the difference $f(1,Z) - f(0,Z)$ might wash out. 
 
-try3 <- ranger(y ~ ., always.split.variables = "z", data = full_data)
-individual_effect_est3 <- predict(try3, full_data %>% mutate(z = 1))$predictions - 
-  predict(try3, full_data %>% mutate(z = 0))$predictions
+Let's consider for example the following model (defined by a set of equations, also termed "structural equations"):
 
-sqrt(mean((actual - individual_effect_est3)^2))
-plot(actual, individual_effect_est)
+$$Y = \beta_0 + \beta_1 X + \beta_2 Z + \epsilon$$
 
+$$X = 1 \, \text{if} \, Z + U_x > 0.4, \, X = 0 \, \text{if} \, Z + U_x \leq 0.4$$
+
+and
+
+$$Z = U_z$$
+
+Where $U_x, \, U_z, \, \epsilon \sim \mathbb{N}(0,1)$ and $\{\beta_0, \beta_1, \beta_2\} = \{0.2, 0.1, -0.8\}$
+
+So the treatment effect in this case is $\beta_1 = 0.1$
+
+I've simulated a dataset from the above equations and fitted the model $\hat{f}(X,Z)$ using a decision tree. Below I plot the fitted tree:
+
+```{r simulate dataset}
+N <- 1000
+Z <- rnorm(N)
+X <- Z + rnorm(N) > 0.4
+Y <- 0.2 + X*(0.1) - 0.8 * Z + rnorm(N)
+sim_data <- data.frame(X, Z, Y)
+
+a <- rpart(Y ~ X + Z, data = sim_data)
+rpart.plot(a)
 ```
+
+We can see that the tree completely ignores the $X$ variable, giving the impression there's no treatment effect at all. I've simulated a very simple dataset and used a very simple model for illustration purposes. The problem I've demonstrated persists though when using more sophisticated algortihms when dealing with high dimensional datasets and/or non-linear relationships.
+
+
 

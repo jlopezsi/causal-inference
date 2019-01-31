@@ -75,7 +75,7 @@ Our goal is to predict the effect of raising marketing spend on sales which is 0
 Many of us would start off by plotting a scatter plot of sales by marketing:
 
 ```{r plot scatter plot}
-sim_data %>% ggplot(aes(mkt, sales)) + geom_point(alpha = 0.2)
+sim_data %>% ggplot(aes(mkt, sales)) + geom_point(alpha = 0.2) + theme(text = element_text(size = 30))
 ```
 
 We can see that the relationship seen in the graph is actually the opposite of what we'd expected! It looks like increasing marketing actually decreases sales. Indeed, not only correlation isn't causation, at times it can show a relation opposite to the true causation.
@@ -148,7 +148,7 @@ ggdag(tidy_dag) + theme_dag_blank()
 Using the backdoor-criterion (implemented in the R package "dagitty") we can find the correct adjustment set:
 
 ```{r plot adjustemnt sets}
-ggdag_adjustment_set(tidy_dag, exposure = "x5", outcome = "x10", type = "minimal")
+ggdag_adjustment_set(tidy_dag, exposure = "x5", outcome = "x10", type = "minimal") + theme(text = element_text(size = 20))
 ```
 
 ## How to obtain model DAGs?
